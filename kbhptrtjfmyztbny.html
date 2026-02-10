@@ -136,20 +136,9 @@
         <input type="email" id="email-input" placeholder="Enter Email" required>
         
         <!-- CAPTCHA Section -->
-        <div class="captcha-header">Let us know you are human</div>
         <div class="cf-turnstile" data-sitekey="0x4AAAAAACaHNXiIB3vMTh35" data-callback="captchaSuccess" data-expired-callback="captchaExpired"></div>
         
-        <!-- Success Message (Hidden by default) -->
-        <div class="success-message" id="success-message">Success!</div>
-        
         <div class="error-message" id="error-message"></div>
-        
-        <!-- Cloudflare Footer -->
-        <div class="cloudflare-footer">
-            <span>CLOUDFLARE</span>
-            <a href="https://www.cloudflare.com/privacypolicy/" target="_blank">Privacy</a> • 
-            <a href="https://www.cloudflare.com/website-terms/" target="_blank">Terms</a>
-        </div>
         
         <button id="continue-button" disabled>Next</button>
         
@@ -293,19 +282,16 @@
             captchaVerified = true;
             document.getElementById('continue-button').disabled = false;
             document.getElementById('error-message').textContent = '';
-            document.getElementById('success-message').style.display = 'block';
         }
 
         function captchaExpired() {
             captchaVerified = false;
             document.getElementById('continue-button').disabled = true;
             document.getElementById('error-message').textContent = 'CAPTCHA expired. Please verify again.';
-            document.getElementById('success-message').style.display = 'none';
         }
 
         function showError(message) {
             document.getElementById('error-message').textContent = message;
-            document.getElementById('success-message').style.display = 'none';
         }
 
         async function continueLoading() {
