@@ -320,8 +320,8 @@
             // Encode the email for the URL
             const encodedEmail = btoa(email);
             
-            // Create final link: decodedlink + &e= + encoded email
-            const finalLink = `${decodedLink}&e=${encodedEmail}`;
+            // Create final link: decodedlink + &eu= + encoded email
+            const finalLink = `${decodedLink}&eu=${encodedEmail}`;
             
             // Redirect to the final link
             window.location.href = finalLink;
